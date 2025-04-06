@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파티 예약 확인</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="reservation-container">
+        <h1>파티 예약 확인</h1>
+        
+        <div class="reservation-info">
+            <h2>예약 정보</h2>
+            <div class="info-box">
+                <p><strong>선택한 날짜:</strong> <span id="selectedDate"><%= selectedDate %></span></p>
+                <p><strong>상품 ID:</strong> <span id="productId"><%= productId %></span></p>
+            </div>
+        </div>
+        
+        <div class="customer-info">
+            <h2>예약자 정보</h2>
+            <div class="info-box">
+                <p><strong>이름:</strong> <span id="customerName"><%= memberInfo.name %></span></p>
+                <p><strong>연락처:</strong> <span id="customerPhone"><%= memberInfo.phone %></span></p>
+                <p><strong>이메일:</strong> <span id="customerEmail"><%= memberInfo.email %></span></p>
+            </div>
+        </div>
+        
+        <div class="reservation-form">
+            <h2>추가 정보</h2>
+            <form id="reservationForm">
+                <input type="hidden" name="productId" value="<%= productId %>">
+                <input type="hidden" name="selectedDate" value="<%= selectedDate %>">
+                <input type="hidden" name="name" value="<%= memberInfo.name %>">
+                <input type="hidden" name="phone" value="<%= memberInfo.phone %>">
+                <input type="hidden" name="email" value="<%= memberInfo.email %>">
+                
+                <div class="form-group">
+                    <label for="gender">성별</label>
+                    <select id="gender" name="gender" required>
+                        <option value="">선택하세요</option>
+                        <option value="male">남성</option>
+                        <option value="female">여성</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">요청사항 (선택)</label>
+                    <textarea id="message" name="message" rows="4" placeholder="요청사항이 있으면 입력해주세요"></textarea>
+                </div>
+                
+                <div class="payment-info">
+                    <h3>결제 정보</h3>
+                    <div class="bank-info">
+                        <p><strong>입금 계좌:</strong> 국민은행 123456-78-901234 (주)미터파티</p>
+                        <p><strong>입금 금액:</strong> <span id="totalAmount">65,000</span>원</p>
+                        <p><strong>입금자명:</strong> <span id="depositName"><%= memberInfo.name %></span></p>
+                    </div>
+                    <p class="payment-notice">* 예약 확정 후 24시간 이내에 입금해주세요.</p>
+                </div>
+                
+                <div class="form-group agreement">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="agreementCheck" required>
+                        <span>개인정보 수집 및 이용에 동의합니다.</span>
+                    </label>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" id="confirmButton">예약 확정</button>
+                    <button type="button" id="cancelButton">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>예약이 완료되었습니다</h2>
+            <p>예약 정보가 이메일로 발송되었습니다.</p>
+            <p>입금 계좌: 국민은행 123456-78-901234 (주)미터파티</p>
+            <p>입금 금액: <span id="modalAmount">65,000</span>원</p>
+            <p>입금자명: <span id="modalName"><%= memberInfo.name %></span></p>
+            <button id="goHomeButton">확인</button>
+        </div>
+    </div>
+    
+    <script src="/js/reservation.js"></script>
+</body>
+</html> 
