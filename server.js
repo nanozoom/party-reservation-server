@@ -11,39 +11,83 @@ app.get('/', (req, res) => {
 app.get('/reserve', async (req, res) => {
   const { product_id, selected_date, member_code, ticket_type, price } = req.query;
   
+  console.log('요청 파라미터:', req.query);
+  console.log('회원 코드:', member_code);
+  
   // 기본 예약 정보
   let reservationData = {
     productId: product_id || '1',
     selectedDate: selected_date || '날짜 정보 없음',
     price: price || '65000',
-    name: '예약자',
+    name: '비회원',
     pointBalance: 0
   };
   
   // 회원 정보 및 적립금 조회
   if (member_code) {
+    console.log('회원 정보 조회 시작: 회원코드 =', member_code);
     try {
-      // 아임웹 API로 회원 정보 조회
-      const memberInfo = await getImwebMemberInfo(member_code);
+      // 토큰 발급 시도
+      const token = await getImwebAccessToken();
+      console.log('토큰 발급 결과:', token ? '성공' : '실패');
       
-      if (memberInfo && memberInfo.success) {
-        reservationData.name = memberInfo.data.name || '회원';
+      if (token) {
+        // v1 API 엔드포인트로 시도 (URL 수정)
+        const memberApiUrl = `https://openapi.imweb.me/member/${member_code}`;
+        console.log('회원 정보 요청 URL:', memberApiUrl);
         
-        // 적립금 조회
-        const pointBalance = await getImwebMemberPoints(member_code);
-        reservationData.pointBalance = pointBalance;
+        const response = await fetch(memberApiUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         
-        console.log('회원 정보 조회 성공:', reservationData.name, '적립금:', reservationData.pointBalance);
-      } else {
-        console.log('회원 정보 조회 실패');
+        console.log('API 응답 상태:', response.status);
+        
+        if (response.ok) {
+          const memberData = await response.json();
+          console.log('회원 정보 응답:', memberData);
+          
+          // 응답 구조 확인 후 데이터 가져오기
+          if (memberData && memberData.data) {
+            reservationData.name = memberData.data.name || '회원';
+            
+            // 적립금 조회도 같은 방식으로 시도
+            const pointResponse = await fetch(`https://openapi.imweb.me/member/${member_code}/point`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (pointResponse.ok) {
+              const pointData = await pointResponse.json();
+              console.log('적립금 정보 응답:', pointData);
+              
+              // 응답 구조에 따라 적립금 정보 가져오기
+              if (pointData && pointData.data) {
+                reservationData.pointBalance = pointData.data.point_balance || 0;
+              }
+            } else {
+              console.log('적립금 조회 실패:', pointResponse.status);
+            }
+          }
+        } else {
+          console.log('회원 정보 조회 실패:', await response.text());
+        }
       }
     } catch (error) {
-      console.error('회원 정보 조회 오류:', error);
+      console.error('회원 정보 조회 중 오류 발생:', error);
     }
-  } else {
-    // 비회원인 경우
-    reservationData.name = '비회원';
-    reservationData.pointBalance = 0;
+  }
+  
+  // 이 부분은 테스트용으로 추가 (실제 API 작동 여부 확인용)
+  if (member_code === 'test') {
+    reservationData.name = '테스트 회원';
+    reservationData.pointBalance = 5000;
   }
   
   // HTML 응답
