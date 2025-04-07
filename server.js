@@ -12,14 +12,7 @@ app.get('/reserve', async (req, res) => {
   console.log('요청 URL:', req.url);
   console.log('모든 쿼리 파라미터:', req.query);
   
-  // URL 디코딩 테스트
-  if (req.url.includes('member_code=')) {
-    const urlParts = req.url.split('member_code=');
-    const memberCodePart = urlParts[1].split('&')[0];
-    console.log('URL에서 직접 추출한 회원 코드:', memberCodePart);
-  }
-  
-  const { product_id, selected_date, member_code, ticket_type, price } = req.query;
+  const { product_id, selected_date, member_code, test_code, ticket_type, price } = req.query;
   
   // 테스트 링크를 표시 - 문제 해결용
   const testLink = `<a href="/reserve?product_id=1&selected_date=2023-04-12&member_code=test123" style="color:blue;text-decoration:underline;">이 테스트 링크를 클릭하세요</a>`;
@@ -34,21 +27,6 @@ app.get('/reserve', async (req, res) => {
     </div>
   `;
   
-  // member_code 값이 test123일 경우 테스트 메시지 표시
-  if (member_code === 'test123') {
-    return res.send(`
-      <html>
-        <head><title>테스트 성공</title></head>
-        <body>
-          <h1 style="color:green">테스트 성공!</h1>
-          <p>회원 코드가 올바르게 전달됨: ${member_code}</p>
-          ${debugInfo}
-          <p><a href="javascript:history.back()">뒤로 가기</a></p>
-        </body>
-      </html>
-    `);
-  }
-  
   // 기본 예약 정보
   let reservationData = {
     productId: product_id || '1',
@@ -59,70 +37,74 @@ app.get('/reserve', async (req, res) => {
   };
   
   // 회원 정보 및 적립금 조회
-  if (member_code) {
-    console.log('회원 정보 조회 시작: 회원코드 =', member_code);
-    try {
-      // 토큰 발급 시도
-      const token = await getImwebAccessToken();
-      console.log('토큰 발급 결과:', token ? '성공' : '실패');
-      
-      if (token) {
-        // v1 API 엔드포인트로 시도 (URL 수정)
-        const memberApiUrl = `https://openapi.imweb.me/member/${member_code}`;
-        console.log('회원 정보 요청 URL:', memberApiUrl);
-        
-        const response = await fetch(memberApiUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('API 응답 상태:', response.status);
-        
-        if (response.ok) {
-          const memberData = await response.json();
-          console.log('회원 정보 응답:', memberData);
-          
-          // 응답 구조 확인 후 데이터 가져오기
-          if (memberData && memberData.data) {
-            reservationData.name = memberData.data.name || '회원';
-            
-            // 적립금 조회도 같은 방식으로 시도
-            const pointResponse = await fetch(`https://openapi.imweb.me/member/${member_code}/point`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (pointResponse.ok) {
-              const pointData = await pointResponse.json();
-              console.log('적립금 정보 응답:', pointData);
-              
-              // 응답 구조에 따라 적립금 정보 가져오기
-              if (pointData && pointData.data) {
-                reservationData.pointBalance = pointData.data.point_balance || 0;
-              }
-            } else {
-              console.log('적립금 조회 실패:', pointResponse.status);
-            }
-          }
-        } else {
-          console.log('회원 정보 조회 실패:', await response.text());
-        }
-      }
-    } catch (error) {
-      console.error('회원 정보 조회 중 오류 발생:', error);
+  if (member_code || test_code) {
+    console.log('회원 정보 처리 시작:', { member_code, test_code });
+    
+    // 테스트 코드가 있으면 테스트 회원으로 처리
+    if (test_code === 'fixed_member') {
+      reservationData.name = '테스트 회원';
+      reservationData.pointBalance = 5000;
+      console.log('테스트 회원 정보 설정됨');
     }
-  }
-  
-  // 이 부분은 테스트용으로 추가 (실제 API 작동 여부 확인용)
-  if (member_code === 'test') {
-    reservationData.name = '테스트 회원';
-    reservationData.pointBalance = 5000;
+    // 실제 회원 코드가 있으면 API 조회 시도
+    else if (member_code) {
+      try {
+        // 토큰 발급 시도
+        const token = await getImwebAccessToken();
+        console.log('토큰 발급 결과:', token ? '성공' : '실패');
+        
+        if (token) {
+          // v1 API 엔드포인트로 시도 (URL 수정)
+          const memberApiUrl = `https://openapi.imweb.me/member/${member_code}`;
+          console.log('회원 정보 요청 URL:', memberApiUrl);
+          
+          const response = await fetch(memberApiUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          console.log('API 응답 상태:', response.status);
+          
+          if (response.ok) {
+            const memberData = await response.json();
+            console.log('회원 정보 응답:', memberData);
+            
+            // 응답 구조 확인 후 데이터 가져오기
+            if (memberData && memberData.data) {
+              reservationData.name = memberData.data.name || '회원';
+              
+              // 적립금 조회도 같은 방식으로 시도
+              const pointResponse = await fetch(`https://openapi.imweb.me/member/${member_code}/point`, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (pointResponse.ok) {
+                const pointData = await pointResponse.json();
+                console.log('적립금 정보 응답:', pointData);
+                
+                // 응답 구조에 따라 적립금 정보 가져오기
+                if (pointData && pointData.data) {
+                  reservationData.pointBalance = pointData.data.point_balance || 0;
+                }
+              } else {
+                console.log('적립금 조회 실패:', pointResponse.status);
+              }
+            }
+          } else {
+            console.log('회원 정보 조회 실패:', await response.text());
+          }
+        }
+      } catch (error) {
+        console.error('회원 정보 조회 오류:', error);
+      }
+    }
   }
   
   // HTML 응답
