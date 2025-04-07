@@ -22,21 +22,39 @@ app.get('/reserve', async (req, res) => {
   // 회원 정보 및 적립금 조회 (실제 API 연동 시 구현)
   if (member_code) {
     try {
-      // 실제 환경에서는 아임웹 API 호출
-      const memberInfo = await getImwebMemberInfo(member_code);
-      const pointBalance = await getImwebMemberPoints(member_code);
-      
-      if (memberInfo && memberInfo.success) {
-        reservationData.name = memberInfo.data.name || '예약자';
-        reservationData.pointBalance = pointBalance || 0;
+      // API 키가 설정되어 있는지 확인
+      const hasApiKeys = typeof clientId !== 'undefined' && 
+                        clientId !== '발급받은_클라이언트_ID' && 
+                        typeof clientSecret !== 'undefined' && 
+                        clientSecret !== '발급받은_시크릿_키';
+                        
+      if (hasApiKeys) {
+        // 실제 API 호출
+        const memberInfo = await getImwebMemberInfo(member_code);
+        const pointBalance = await getImwebMemberPoints(member_code);
+        
+        if (memberInfo && memberInfo.success) {
+          reservationData.name = memberInfo.data.name || '예약자';
+          reservationData.pointBalance = pointBalance || 0;
+        } else {
+          throw new Error('API 호출은 성공했으나 회원 정보를 불러오지 못했습니다');
+        }
       } else {
-        // 테스트용 임시 데이터
-        reservationData.name = '홍길동';
-        reservationData.pointBalance = 3000; // 임시 적립금 3,000원
+        // API 키가 없는 경우 테스트 데이터 사용
+        console.log('API 키가 설정되지 않아 테스트 데이터를 사용합니다');
+        reservationData.name = '회원님';
+        reservationData.pointBalance = 3000;
       }
     } catch (error) {
       console.error('회원 정보 조회 오류:', error);
+      // 오류 발생 시 기본값 사용
+      reservationData.name = '회원님';
+      reservationData.pointBalance = 0;
     }
+  } else {
+    // 비회원인 경우
+    reservationData.name = '비회원';
+    reservationData.pointBalance = 0;
   }
   
   // HTML 응답
