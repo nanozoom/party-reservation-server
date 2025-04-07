@@ -1,4 +1,5 @@
 const express = require('express');
+const fetch = require('node-fetch');
 const app = express();
 
 // 홈 페이지
@@ -19,37 +20,25 @@ app.get('/reserve', async (req, res) => {
     pointBalance: 0
   };
   
-  // 회원 정보 및 적립금 조회 (실제 API 연동 시 구현)
+  // 회원 정보 및 적립금 조회
   if (member_code) {
     try {
-      // API 키가 설정되어 있는지 확인
-      const hasApiKeys = typeof clientId !== 'undefined' && 
-                        clientId !== '발급받은_클라이언트_ID' && 
-                        typeof clientSecret !== 'undefined' && 
-                        clientSecret !== '발급받은_시크릿_키';
-                        
-      if (hasApiKeys) {
-        // 실제 API 호출
-        const memberInfo = await getImwebMemberInfo(member_code);
-        const pointBalance = await getImwebMemberPoints(member_code);
+      // 아임웹 API로 회원 정보 조회
+      const memberInfo = await getImwebMemberInfo(member_code);
+      
+      if (memberInfo && memberInfo.success) {
+        reservationData.name = memberInfo.data.name || '회원';
         
-        if (memberInfo && memberInfo.success) {
-          reservationData.name = memberInfo.data.name || '예약자';
-          reservationData.pointBalance = pointBalance || 0;
-        } else {
-          throw new Error('API 호출은 성공했으나 회원 정보를 불러오지 못했습니다');
-        }
+        // 적립금 조회
+        const pointBalance = await getImwebMemberPoints(member_code);
+        reservationData.pointBalance = pointBalance;
+        
+        console.log('회원 정보 조회 성공:', reservationData.name, '적립금:', reservationData.pointBalance);
       } else {
-        // API 키가 없는 경우 테스트 데이터 사용
-        console.log('API 키가 설정되지 않아 테스트 데이터를 사용합니다');
-        reservationData.name = '회원님';
-        reservationData.pointBalance = 3000;
+        console.log('회원 정보 조회 실패');
       }
     } catch (error) {
       console.error('회원 정보 조회 오류:', error);
-      // 오류 발생 시 기본값 사용
-      reservationData.name = '회원님';
-      reservationData.pointBalance = 0;
     }
   } else {
     // 비회원인 경우
@@ -160,9 +149,9 @@ app.listen(port, () => {
 
 // 아임웹 API 인증 토큰 발급 함수
 async function getImwebAccessToken() {
-  // 아임웹 개발자 센터에서 발급받은 키 정보
-  const clientId = '발급받은_클라이언트_ID';
-  const clientSecret = '발급받은_시크릿_키';
+  // 아임웹에서 발급받은 키 정보
+  const clientId = '16d22cb158a5fd814f19f157db7c28e3d6152e9ae8';
+  const clientSecret = 'fbfe2b04b3dc5ab4e91493';
   
   try {
     const response = await fetch('https://openapi.imweb.me/v2/oauth2/token', {
@@ -189,11 +178,13 @@ async function getImwebAccessToken() {
   }
 }
 
-// 아임웹 회원 정보 조회 함수
+// 회원 정보 가져오기
 async function getImwebMemberInfo(memberCode) {
   try {
     const token = await getImwebAccessToken();
-    const response = await fetch(`https://openapi.imweb.me/member/${memberCode}`, {
+    if (!token) return null;
+    
+    const response = await fetch(`https://openapi.imweb.me/v2/member/${memberCode}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -202,7 +193,7 @@ async function getImwebMemberInfo(memberCode) {
     });
     
     if (!response.ok) {
-      throw new Error(`API 응답 오류: ${response.status}`);
+      throw new Error(`회원 정보 조회 오류: ${response.status}`);
     }
     
     return await response.json();
@@ -212,11 +203,13 @@ async function getImwebMemberInfo(memberCode) {
   }
 }
 
-// 아임웹 회원 적립금 조회 함수
+// 적립금 정보 가져오기
 async function getImwebMemberPoints(memberCode) {
   try {
     const token = await getImwebAccessToken();
-    const response = await fetch(`https://openapi.imweb.me/member/${memberCode}/point`, {
+    if (!token) return 0;
+    
+    const response = await fetch(`https://openapi.imweb.me/v2/member/${memberCode}/point`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -225,7 +218,7 @@ async function getImwebMemberPoints(memberCode) {
     });
     
     if (!response.ok) {
-      throw new Error(`API 응답 오류: ${response.status}`);
+      throw new Error(`적립금 조회 오류: ${response.status}`);
     }
     
     const data = await response.json();
