@@ -9,16 +9,44 @@ app.get('/', (req, res) => {
 
 // 예약 페이지 - 적립금 기능 추가
 app.get('/reserve', async (req, res) => {
-  console.log('요청 전체:', req.url);
-  console.log('쿼리 파라미터:', req.query);
-  console.log('회원 코드:', req.query.member_code);
+  console.log('요청 URL:', req.url);
+  console.log('모든 쿼리 파라미터:', req.query);
+  
+  // URL 디코딩 테스트
+  if (req.url.includes('member_code=')) {
+    const urlParts = req.url.split('member_code=');
+    const memberCodePart = urlParts[1].split('&')[0];
+    console.log('URL에서 직접 추출한 회원 코드:', memberCodePart);
+  }
   
   const { product_id, selected_date, member_code, ticket_type, price } = req.query;
   
-  // 테스트용 - 실제 상황에서는 제거
-  if (req.query.member_code === 'test123') {
-    const html = `<html><body>테스트 성공! 회원 코드가 올바르게 전달됨: ${req.query.member_code}</body></html>`;
-    return res.send(html);
+  // 테스트 링크를 표시 - 문제 해결용
+  const testLink = `<a href="/reserve?product_id=1&selected_date=2023-04-12&member_code=test123" style="color:blue;text-decoration:underline;">이 테스트 링크를 클릭하세요</a>`;
+  const debugInfo = `
+    <div style="background:#f8f8f8;padding:10px;margin:10px 0;border:1px solid #ddd;">
+      <h3>디버그 정보</h3>
+      <p>요청 URL: ${req.url}</p>
+      <p>회원 코드: ${member_code || '없음'}</p>
+      <p>상품 ID: ${product_id || '없음'}</p>
+      <p>선택 날짜: ${selected_date || '없음'}</p>
+      <p>${testLink}</p>
+    </div>
+  `;
+  
+  // member_code 값이 test123일 경우 테스트 메시지 표시
+  if (member_code === 'test123') {
+    return res.send(`
+      <html>
+        <head><title>테스트 성공</title></head>
+        <body>
+          <h1 style="color:green">테스트 성공!</h1>
+          <p>회원 코드가 올바르게 전달됨: ${member_code}</p>
+          ${debugInfo}
+          <p><a href="javascript:history.back()">뒤로 가기</a></p>
+        </body>
+      </html>
+    `);
   }
   
   // 기본 예약 정보
