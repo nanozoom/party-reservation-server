@@ -9,10 +9,17 @@ app.get('/', (req, res) => {
 
 // 예약 페이지 - 적립금 기능 추가
 app.get('/reserve', async (req, res) => {
+  console.log('요청 전체:', req.url);
+  console.log('쿼리 파라미터:', req.query);
+  console.log('회원 코드:', req.query.member_code);
+  
   const { product_id, selected_date, member_code, ticket_type, price } = req.query;
   
-  console.log('요청 파라미터:', req.query);
-  console.log('회원 코드:', member_code);
+  // 테스트용 - 실제 상황에서는 제거
+  if (req.query.member_code === 'test123') {
+    const html = `<html><body>테스트 성공! 회원 코드가 올바르게 전달됨: ${req.query.member_code}</body></html>`;
+    return res.send(html);
+  }
   
   // 기본 예약 정보
   let reservationData = {
